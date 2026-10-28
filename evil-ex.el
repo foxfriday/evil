@@ -721,25 +721,59 @@ are quoted for the shell."
     (setq file-name (or (file-remote-p file-name 'localname) file-name))
     (when current-fname
       (setq current-fname (or (file-remote-p current-fname 'localname)
-                              current-fname))
-      (when shell (setq current-fname (shell-quote-argument current-fname)))
-      (setq file-name
-            (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(%\\)"
-                                      current-fname file-name
-                                      t t 2)))
+                              current-fname)))
     (when alternate-fname
       (setq alternate-fname (or (file-remote-p alternate-fname 'localname)
-                                alternate-fname))
-      (when shell (setq alternate-fname (shell-quote-argument alternate-fname)))
+                                alternate-fname)))
+    (if shell
+        (setq file-name (evil-ex--replace-special-filenames-in-shell-command
+                         file-name current-fname alternate-fname))
+      (when current-fname
+        (setq file-name
+              (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(%\\)"
+                                        current-fname file-name
+                                        t t 2)))
+      (when alternate-fname
+        (setq file-name
+              (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(#\\)"
+                                        alternate-fname file-name
+                                        t t 2)))
       (setq file-name
-            (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(#\\)"
-                                      alternate-fname file-name
-                                      t t 2)))
-    (setq file-name
-          (replace-regexp-in-string "\\\\\\([#%]\\)"
-                                    "\\1" file-name t))
+            (replace-regexp-in-string "\\\\\\([#%]\\)"
+                                      "\\1" file-name t)))
     (setq file-name (concat remote file-name)))
   file-name)
+
+(defun evil-ex--replace-special-filenames-in-shell-command
+    (command current-fname alternate-fname)
+  "Replace % and # in the shell COMMAND by CURRENT-FNAME and ALTERNATE-FNAME.
+Each file name is quoted for the context it appears in: unquoted,
+inside single quotes or inside double quotes, so the shell always
+sees it as literal text.  \\% and \\# stand for a literal % and #."
+  (let ((i 0) (len (length command)) quote parts)
+    (while (< i len)
+      (let ((c (aref command i)))
+        (cond
+         ((and (eq c ?\\) (not (eq quote ?')) (< (1+ i) len))
+          (let ((next (aref command (1+ i))))
+            (push (if (memq next '(?% ?#)) (string next) (string c next)) parts)
+            (cl-incf i)))
+         ((and (memq c '(?% ?#))
+               (if (eq c ?%) current-fname alternate-fname))
+          (let ((fname (if (eq c ?%) current-fname alternate-fname)))
+            (push (pcase quote
+                    ('nil (shell-quote-argument fname))
+                    (?' (string-replace "'" "'\\''" fname))
+                    (?\" (replace-regexp-in-string "[\\\\$`\"]" "\\\\\\&"
+                                                   fname t)))
+                  parts)))
+         (t
+          (cond ((eq c quote) (setq quote nil))
+                ((and (null quote) (memq c '(?' ?\")))
+                 (setq quote c)))
+          (push (string c) parts))))
+      (cl-incf i))
+    (apply #'concat (nreverse parts))))
 
 (defun evil-ex-file-arg ()
   "Return the current Ex argument as a file name.

@@ -8889,6 +8889,19 @@ maybe we need one line more with some text\n")
                      (concat "echo " (shell-quote-argument buffer-file-name))))
       (should (equal (evil-ex-replace-special-filenames "cat %")
                      "cat /tmp/a b;echo INJECTED"))
+      (should (equal (evil-ex-replace-special-filenames "echo \\% %" t)
+                     (concat "echo % " (shell-quote-argument buffer-file-name))))
+      (dolist (name '("/tmp/a b;echo INJECTED" "/tmp/$(echo INJECTED)"
+                      "/tmp/it's `echo INJECTED` \"q\""))
+        (setq buffer-file-name name)
+        (dolist (cmd '("echo %" "echo \"%\"" "echo '%'" "echo x\"%\"y"))
+          (should (equal (string-trim-right
+                          (shell-command-to-string
+                           (evil-ex-replace-special-filenames cmd t))
+                          "\n")
+                         (if (string-prefix-p "echo x" cmd)
+                             (concat "x" name "y")
+                           name)))))
       (set-buffer-modified-p nil)
       (setq buffer-file-name nil))))
 
@@ -10001,7 +10014,6 @@ when an error stops the execution of the macro"
 (ert-deftest evil-test-insert-state-undo ()
   "Test that undo isn't lost when done from insert state."
   :tags '(evil)
-  (skip-unless (version<= "28" emacs-version))
   (let (evil-want-fine-undo)
     (customize-set-variable 'evil-undo-system 'undo-redo)
     (evil-test-buffer
