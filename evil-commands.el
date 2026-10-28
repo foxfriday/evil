@@ -878,13 +878,6 @@ In Insert state, insert a newline."
   :type line
   (evil-ret-gen count nil))
 
-(evil-define-motion evil-ret-and-indent (count)
-  "Move the cursor COUNT lines down.
-If point is on a widget or a button, click on it.
-In Insert state, insert a newline and indent."
-  :type line
-  (evil-ret-gen count t))
-
 (evil-define-motion evil-window-top (count)
   "Move the cursor to line COUNT from the top of the window."
   :jump t
@@ -932,15 +925,6 @@ In Insert state, insert a newline and indent."
   :keep-visual t
   (interactive "p")
   (let (scroll-preserve-screen-position) (scroll-up count)))
-
-(evil-define-command evil-scroll-count-reset ()
-  "Set `evil-scroll-count' to 0.
-`evil-scroll-up' and `evil-scroll-down' will then scroll by half of
-the screen (the default)."
-  :repeat nil
-  :keep-visual t
-  (interactive)
-  (setq evil-scroll-count 0))
 
 (defun evil--get-scroll-count (count)
   "Given a user-supplied COUNT, return scroll count."
@@ -2053,11 +2037,6 @@ If a `#' is included before the mark args, the lines are numbered."
             (while (not (eolp))
               (funcall convert-fun (point) (progn (skip-chars-forward " \t") (point)))
               (forward-line))))))))
-
-(evil-define-operator evil-indent-line (beg end)
-  "Indent the line."
-  :motion evil-line
-  (evil-indent beg end))
 
 (evil-define-operator evil-shift-left (beg end &optional count preserve-empty)
   "Shift text from BEG to END to the left.

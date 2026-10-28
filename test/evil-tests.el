@@ -9449,31 +9449,6 @@ parameter set."
     (should (equal (evil-concat-charsets "^ \t\r\n" "[:word:]_")
                    "^ \t\r\n[:word:]_"))))
 
-(ert-deftest evil-test-properties ()
-  "Test `evil-get-property' and `evil-put-property'"
-  :tags '(evil util)
-  (defvar evil--alist)
-  (let (evil--alist)
-    (ert-info ("Set properties")
-      (evil-put-property 'evil--alist 'wibble :foo t)
-      (should (equal evil--alist '((wibble . (:foo t)))))
-      (evil-put-property 'evil--alist 'wibble :bar nil)
-      (should (equal evil--alist '((wibble . (:foo t :bar nil)))))
-      (evil-put-property 'evil--alist 'wobble :foo nil :bar nil :baz t)
-      (should (equal evil--alist '((wobble . (:foo nil :bar nil :baz t))
-                             (wibble . (:foo t :bar nil))))))
-    (ert-info ("Get properties")
-      (should (evil-get-property evil--alist 'wibble :foo))
-      (should-not (evil-get-property evil--alist 'wibble :bar))
-      (should-not (evil-get-property evil--alist 'wobble :foo))
-      (should-not (evil-get-property evil--alist 'wibble :baz))
-      (should (equal (evil-get-property evil--alist t :foo)
-                     '((wibble . t) (wobble . nil))))
-      (should (equal (evil-get-property evil--alist t :bar)
-                     '((wibble . nil) (wobble . nil))))
-      (should (equal (evil-get-property evil--alist t :baz)
-                     '((wobble . t)))))))
-
 (ert-deftest evil-test-filter-list ()
   "Test `evil-filter-list'"
   :tags '(evil util)
@@ -9503,7 +9478,7 @@ parameter set."
       (should (equal list '(1 2 3))))))
 
 (ert-deftest evil-test-concat-lists ()
-  "Test `evil-concat-lists' and `evil-concat-alists'"
+  "Test `evil-concat-lists'"
   :tags '(evil util)
   (ert-info ("Remove duplicates across lists")
     (should (equal (evil-concat-lists
@@ -9514,9 +9489,6 @@ parameter set."
                     '(a a b) nil '(b c) nil)
                    '(a b c))))
   (ert-info ("Remove duplicate associations")
-    (should (equal (evil-concat-alists
-                    '((a . b)) '((a . c)))
-                   '((a . c))))
     (should-not (equal (evil-concat-lists
                         '((a . b)) '((a . c)))
                        '((a . b))))))

@@ -140,16 +140,6 @@
 ;; the major mode changes.
 (put 'evil-local-mode 'permanent-local t)
 
-(defun turn-on-evil-mode ()
-  "Turn on Evil in the current buffer."
-  (interactive)
-  (evil-local-mode))
-
-(defun turn-off-evil-mode ()
-  "Turn off Evil in the current buffer."
-  (interactive)
-  (evil-local-mode -1))
-
 ;; The function `evil-initialize' should only be used to initialize
 ;; `evil-local-mode' from the globalized minor-mode `evil-mode'. It is
 ;; called whenever evil is enabled in a buffer for the first time or
@@ -879,30 +869,6 @@ If STATE is nil, it means any state."
      ((eq entry state) map)
      ((eq entry 'all) map))))
 
-(defun evil-intercept-keymap-state (map)
-  "Return the state for the intercept keymap MAP.
-A return value of t means all states."
-  (let ((state (lookup-key map [intercept-state] map)))
-    (cond
-     ((keymapp state)
-      (evil-intercept-keymap-state state))
-     ((eq state 'all)
-      t)
-     (t
-      state))))
-
-(defun evil-overriding-keymap-state (map)
-  "Return the state for the overriding keymap MAP.
-A return value of t means all states."
-  (let ((state (lookup-key map [override-state] map)))
-    (cond
-     ((keymapp state)
-      (evil-overriding-keymap-state state))
-     ((eq state 'all)
-      t)
-     (t
-      state))))
-
 (defun evil-set-leader (state key &optional localleader)
   "Set KEY to trigger leader bindings in STATE.
 KEY should be in the form produced by `kbd'. STATE is one of
@@ -980,8 +946,6 @@ For example:
                            (if (symbolp keymap) keymap 'keymap)))
          (with-demoted-errors "Error in evil-define-key: %S"
            (evil-define-key* ,state ,keymap ,key ,def ,@bindings))))))
-(defalias 'evil-declare-key #'evil-define-key)
-
 (defun evil-define-key* (state keymap key def &rest bindings)
   "Create a STATE binding from KEY to DEF for KEYMAP.
 STATE is one of normal, insert, visual, replace, operator,

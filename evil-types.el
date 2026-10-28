@@ -89,18 +89,9 @@ If the end position is at the beginning of a line, then:
                       (if (= width 1) "" "s")))))
 
 (evil-define-type inclusive
-  "Include the character under point.
-Handling for `evil-want-visual-char-semi-exclusive' is deprecated,
-and will be removed in a future version."
+  "Include the character under point."
   :expand (lambda (beg end)
-            (if (and (with-no-warnings evil-want-visual-char-semi-exclusive)
-                     (evil-visual-state-p)
-                     (< beg end)
-                     (save-excursion
-                       (goto-char end)
-                       (or (bolp) (eolp))))
-                (evil-range beg end 'exclusive)
-              (evil-range beg (1+ end))))
+            (evil-range beg (1+ end)))
   :contract (lambda (beg end)
               (evil-range beg (max beg (1- end))))
   :normalize (lambda (beg end)

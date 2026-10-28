@@ -576,18 +576,6 @@ Clean up everything set up by `evil-ex-setup'."
                 (p2 (eq (get-text-property 0 'face str2) 'evil-ex-commands)))
             (if (eq p1 p2) (string< str1 str2) p1)))))
 
-(define-obsolete-function-alias 'evil-ex-completion #'completion-at-point "1.15.0")
-
-(define-obsolete-function-alias
-  'evil-ex-command-completion-at-point #'evil-ex-completion-at-point "1.15.0")
-
-(defalias 'evil-ex-argument-completion-at-point #'ignore)
-(make-obsolete
- 'evil-ex-argument-completion-at-point #'evil-ex-completion-at-point "1.15.0")
-
-(define-obsolete-function-alias
-  'evil-ex-elisp-completion-at-point #'elisp-completion-at-point "1.15.0")
-
 (defun evil-ex-define-cmd (cmd function)
   "Bind the function FUNCTION to the command CMD."
   (if (not (string-match-p "\\[" cmd))
@@ -959,13 +947,6 @@ Return the line number of the match."
   "Return a signed number like -3 and +1.
 NUMBER defaults to 1."
   (funcall sign (or number 1)))
-
-(defun evil-ex-command-force-p (command)
-  "Whether COMMAND accepts the bang argument."
-  (declare (obsolete evil-get-command-property "1.15.0"))
-  (let ((binding (evil-ex-completed-binding command t)))
-    (when binding
-      (evil-get-command-property binding :ex-bang))))
 
 (cl-defun evil--ex-syntactic-context
     (&optional (pos (point))

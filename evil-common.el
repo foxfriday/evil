@@ -37,11 +37,6 @@
 (declare-function evil-replace-state-p "evil-states")
 (declare-function evil-set-jump "evil-jumps")
 
-(define-obsolete-function-alias
-  'evil-get-selection #'gui-get-selection "1.15.0")
-(define-obsolete-function-alias
-  'evil-set-selection #'gui-set-selection "1.15.0")
-
 (defmacro evil-with-delay (condition hook &rest body)
   "Execute BODY when CONDITION becomes true, checking with HOOK.
 HOOK can be a simple symbol or of the form (HOOK APPEND LOCAL NAME)
@@ -69,14 +64,6 @@ If LOCAL is non-nil, the buffer-local value of HOOK is modified."
          (progn (fset ,fun-name ,fun)
                 ,@(when local `((put ,fun-name 'permanent-local-hook t)))
                 (add-hook ,hook-sym ,fun-name ,append ,local))))))
-
-(defun evil-delay (condition form hook &optional append local name)
-  "Execute FORM when CONDITION becomes true, checking with HOOK.
-NAME specifies the name of the entry added to HOOK.  If APPEND is
-non-nil, the entry is appended to the hook.  If LOCAL is non-nil,
-the buffer-local value of HOOK is modified."
-  (declare (obsolete evil-with-delay "1.15.0") (indent 2))
-  (eval `(evil-with-delay ,condition (,hook ,append ,local ,name) ,form) t))
 
 ;;; List functions
 
@@ -125,18 +112,6 @@ in the list."
             (throw 'done elt)
           (setq list (cdr list)))))))
 
-(defun evil-member-recursive-if (predicate tree)
-  "Find the first item satisfying PREDICATE in TREE."
-  (declare (obsolete nil "1.15.0"))
-  (cond
-   ((funcall predicate tree)
-    tree)
-   ((listp tree)
-    (catch 'done
-      (dolist (elt tree)
-        (when (setq elt (evil-member-recursive-if predicate elt))
-          (throw 'done elt)))))))
-
 (defun evil-concat-lists (&rest sequences)
   "Concatenate lists, removing duplicates.
 Elements are compared with `eq'."
@@ -145,17 +120,6 @@ Elements are compared with `eq'."
       (dolist (elt sequence)
         (push elt result)))
     (nreverse (cl-remove-duplicates result :test #'eq))))
-
-(defun evil-concat-alists (&rest sequences)
-  "Concatenate association lists, removing duplicates.
-An alist is a list of cons cells (KEY . VALUE) where each key
-may occur only once. Later values overwrite earlier values."
-  (let (result)
-    (dolist (sequence sequences)
-      (dolist (elt sequence)
-        (setq result (assq-delete-all (car-safe elt) result))
-        (push elt result)))
-    (nreverse result)))
 
 (defun evil-concat-plists (&rest sequences)
   "Concatenate property lists, removing duplicates.
@@ -200,44 +164,6 @@ changing the value of `foo'."
         (setq head tail
               tail (cdr (cdr tail))))))
     plist))
-
-(defun evil-get-property (alist key &optional prop)
-  "Return property PROP for KEY in ALIST.
-ALIST is an association list with entries of the form
-\(KEY . PLIST), where PLIST is a property list.
-If PROP is nil, return all properties for KEY.
-If KEY is t, return an association list of keys
-and their PROP values."
-  (declare (obsolete nil "1.15.0"))
-  (cond
-   ((null prop)
-    (cdr (assq key alist)))
-   ((eq key t)
-    (let (result val)
-      (dolist (entry alist result)
-        (setq key (car entry)
-              val (cdr entry))
-        (when (plist-member val prop)
-          (setq val (plist-get val prop))
-          (push (cons key val) result)))))
-   (t
-    (plist-get (cdr (assq key alist)) prop))))
-
-(defun evil-put-property (alist-var key prop val &rest properties)
-  "Set PROP to VAL for KEY in ALIST-VAR.
-ALIST-VAR points to an association list with entries of the form
-\(KEY . PLIST), where PLIST is a property list storing PROP and VAL."
-  (declare (obsolete nil "1.15.0"))
-  (set alist-var
-       (let* ((alist (symbol-value alist-var))
-              (plist (cdr (assq key alist))))
-         (setq plist (plist-put plist prop val))
-         (when properties
-           (setq plist (evil-concat-plists plist properties)
-                 val (car (last properties))))
-         (setq alist (assq-delete-all key alist))
-         (push (cons key plist) alist)))
-  val)
 
 (defun evil-state-property (state prop &optional value)
   "Return the value of property PROP for STATE.
@@ -328,8 +254,6 @@ last, sorting in between."
          (apply #'evil-set-command-properties func ',keys)
          func))))
 
-(define-obsolete-variable-alias
-  'evil-command-properties 'evil--command-properties "1.15.0")
 (defvar evil--command-properties nil
   "Specifications made by `evil-define-command'.")
 
@@ -338,9 +262,6 @@ last, sorting in between."
 See also `evil-get-command-property'."
   (if (symbolp command) (get command 'evil--command-plist)
     (cdr (assq command evil--command-properties))))
-(define-obsolete-function-alias
-  'evil-get-command-properties #'evil-command-properties "1.15.0")
-
 (gv-define-setter evil-command-properties (val command)
   `(if (symbolp ,command) (put ,command 'evil--command-plist ,val)
      ,(macroexp-let2 nil p `(assq ,command evil--command-properties)
@@ -359,7 +280,7 @@ See also `evil-has-command-properties-p'."
 (defun evil-get-command-property (command property &optional default)
   "Return the value of Evil PROPERTY of COMMAND.
 If the command does not have the property, return DEFAULT.
-See also `evil-get-command-properties'."
+See also `evil-command-properties'."
   (let ((p (plist-member (evil-command-properties command) property)))
     (if p (cadr p) default)))
 
@@ -379,25 +300,12 @@ To set multiple properties at once, see
 `evil-set-command-properties' and `evil-add-command-properties'.
 
 \(fn COMMAND PROPERTY VALUE)")
-(defalias 'evil-put-command-property #'evil-set-command-property)
-
 (defun evil-set-command-properties (command &rest properties)
   "Replace all of COMMAND's properties with PROPERTIES.
 PROPERTIES should be a property list.
 This erases all previous properties; to only add properties,
 use `evil-set-command-property'."
   (setf (evil-command-properties command) properties))
-
-(defun evil-remove-command-properties (command &rest properties)
-  "Remove PROPERTIES from COMMAND.
-PROPERTIES should be a list of properties (:PROP1 :PROP2 ...).
-If PROPERTIES is the empty list, all properties are removed."
-  (let (plist)
-    (when properties
-      (setq plist (evil-command-properties command))
-      (dolist (property properties)
-        (setq plist (evil-plist-delete property plist))))
-    (apply #'evil-set-command-properties command plist)))
 
 (defun evil-yank-handler (&optional motion)
   "Return the yank handler for MOTION.
@@ -770,17 +678,6 @@ cursor type is either `evil-force-cursor' or the current state."
                            default))
         (evil-set-cursor cursor)))))
 
-(defmacro evil-save-cursor (&rest body)
-  "Save the current cursor; execute BODY; restore the cursor."
-  (declare (indent defun) (debug t) (obsolete nil "1.15.0"))
-  `(let ((cursor cursor-type)
-         (color (frame-parameter (selected-frame) 'cursor-color))
-         (inhibit-quit t))
-     (unwind-protect
-         (progn ,@body)
-       (setq cursor-type cursor)
-       (evil-set-cursor-color color))))
-
 (defun evil-echo (string &rest args)
   "Display an unlogged message in the echo area.
 That is, the message is not logged in the *Messages* buffer.
@@ -879,14 +776,6 @@ See also `evil-save-goal-column'."
        (eq (or goal-column temporary-goal-column) most-positive-fixnum)
        (memq last-command '(next-line previous-line))))
 
-(defun evil-eolp ()
-  "Like `eolp' but accounts for `evil-move-beyond-eol' being nil."
-  (ignore-errors
-    (save-excursion
-      (unless (or evil-move-beyond-eol (memq evil-state '(insert replace)))
-        (forward-char))
-      (eolp))))
-
 (defmacro evil-ensure-column (&rest body)
   "Execute BODY so that column after execution is correct.
 If `evil-start-of-line' is nil, treat BODY as if it were a `next-line' command.
@@ -913,15 +802,6 @@ so it is more compatible with Evil's notion of EOL tracking."
                 (max 0 (+ (truncate (car temporary-goal-column))
                           (cdr temporary-goal-column)))
               temporary-goal-column))))))
-
-(defun evil-narrow (beg end)
-  "Restrict the buffer to BEG and END.
-BEG or END may be nil, specifying a one-sided restriction including
-`point-min' or `point-max'. See also `evil-with-restriction.'"
-  (declare (obsolete nil "1.15.0"))
-  (narrow-to-region
-   (if beg (max beg (point-min)) (point-min))
-   (if end (min end (point-max)) (point-max))))
 
 (defmacro evil-with-restriction (beg end &rest body)
   "Execute BODY with the buffer narrowed to BEG and END.
@@ -1015,32 +895,6 @@ is non-nil) and returns point."
       (when (> (current-column) column)
         (evil-move-cursor-back))))
   (point))
-
-(defmacro evil-loop (spec &rest body)
-  "Loop with countdown variable.
-Evaluate BODY with VAR counting down from COUNT to 0.
-COUNT can be negative, in which case VAR counts up instead.
-The return value is the value of VAR when the loop
-terminates, which is 0 if the loop completes successfully.
-RESULT specifies a variable for storing this value.
-
-\(fn (VAR COUNT [RESULT]) BODY...)"
-  (declare (indent defun) (debug dolist) (obsolete nil "1.15.0"))
-  (let* ((i (make-symbol "loopvar"))
-         (var (pop spec))
-         (count (pop spec))
-         (result (pop spec)))
-    (setq var (or (unless (eq var result) var) i)
-          result (or result var))
-    `(let ((,var ,count))
-       (setq ,result ,var)
-       (while (/= ,var 0)
-         ,@body
-         (if (> ,var 0)
-             (setq ,var (1- ,var))
-           (setq ,var (1+ ,var)))
-         (setq ,result ,var))
-       ,var)))
 
 ;;; Motions
 
@@ -2217,19 +2071,6 @@ Then restore Transient Mark mode to its previous setting."
            ,@body)
        (evil-restore-transient-mark-mode))))
 
-(defmacro evil-with-active-region (beg end &rest body)
-  "Execute BODY with an active region from BEG to END."
-  (declare (indent 2)
-           (debug t))
-  `(let ((beg ,beg) (end ,end)
-         evil-transient-vals)
-     (evil-with-transient-mark-mode
-       (save-excursion
-         (evil-active-region 1)
-         (evil-move-mark beg)
-         (goto-char end)
-         ,@body))))
-
 (defun evil-exchange-point-and-mark ()
   "Exchange point and mark without activating the region."
   (let* ((point (point))
@@ -2819,15 +2660,6 @@ This can be overridden with TYPE."
                     (evil-type range1)
                     (evil-type range2)))))
 
-(defun evil-subrange-p (range1 range2)
-  "Whether RANGE1 is contained within RANGE2."
-  (and (evil-range-p range1)
-       (evil-range-p range2)
-       (<= (evil-range-beginning range2)
-           (evil-range-beginning range1))
-       (>= (evil-range-end range2)
-           (evil-range-end range1))))
-
 (defun evil-select-inner-object (thing beg end type &optional count line)
   "Return an inner text object range of COUNT objects.
 If COUNT is positive, return objects following point; if COUNT is
@@ -3333,11 +3165,6 @@ Return a new range if COPY is non-nil."
 Return a new range if COPY is non-nil."
   (evil-transform-range :contract range copy))
 
-(defun evil-normalize-range (range &optional copy)
-  "Normalize RANGE according to its type.
-Return a new range if COPY is non-nil."
-  (evil-transform-range :normalize range copy))
-
 (defun evil-transform-range (transform range &optional copy)
   "Apply TRANSFORM to RANGE according to its type.
 Return a new range if COPY is non-nil."
@@ -3347,11 +3174,6 @@ Return a new range if COPY is non-nil."
     (apply #'evil-set-range range
            (apply #'evil-transform transform range)))
   range)
-
-(defun evil-describe-range (range)
-  "Return description of RANGE.
-If no description is available, return the empty string."
-  (apply #'evil-describe range))
 
 ;;; Undo
 

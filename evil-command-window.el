@@ -138,14 +138,6 @@ the current command to be edited."
                        ":"
                        #'evil-command-window-ex-execute))
 
-(define-obsolete-function-alias
-  'evil-ex-command-window #'evil-command-window "1.15.0"
-  "Start command window with Ex history and current minibuffer content.")
-
-(define-obsolete-function-alias
-  'evil-ex-search-command-window #'evil-command-window "1.15.0"
-  "Start command window with search history and current minibuffer content.")
-
 (defun evil-command-window-ex-execute (result)
   "Execute RESULT as an Ex command."
   (unless (string-match-p "\\`[ \t\n\r]*\\'" result)

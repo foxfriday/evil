@@ -1114,27 +1114,6 @@ These commands work better without this newline."
   :set #'evil-set-visual-newline-commands
   :initialize #'evil-custom-initialize-pending-reset)
 
-(defcustom evil-want-visual-char-semi-exclusive nil
-  "DEPRECATED.  Will be removed in a future version.
-Prefer to set `evil-v$-excludes-newline' to non-nil.
-
-Visual character selection to beginning/end of line is exclusive.
-If non nil then an inclusive visual character selection which
-ends at the beginning or end of a line is turned into an
-exclusive selection. Thus if the selected (inclusive) range ends
-at the beginning of a line it is changed to not include the first
-character of that line, and if the selected range ends at the end
-of a line it is changed to not include the newline character of
-that line."
-  :type 'boolean
-  :group 'evil)
-(make-obsolete-variable
- 'evil-want-visual-char-semi-exclusive
- "Semi-exclusivity prevents selecting text + 1st char of next line,
-without having to introduce new niche functionality.
-Prefer to set `evil-v$-excludes-newline' to non-nil."
- "1.15.0")
-
 (defcustom evil-v$-excludes-newline nil
   "If non-nil, `evil-end-of-line' does not move as far as to include
 the `\n' char at eol. This makes `v$' consistent with `$' used as a
@@ -1155,11 +1134,6 @@ preserved."
   "CJK support"
   :prefix "evil-cjk-"
   :group 'evil)
-
-(defcustom evil-cjk-emacs-word-boundary nil
-  "Determine word boundary exactly the same way as Emacs does."
-  :type 'boolean
-  :group 'evil-cjk)
 
 (defcustom evil-cjk-word-separating-categories
   '(;; Kanji
@@ -1670,11 +1644,6 @@ paste, BEG end END are the region of the inserted
 text. FIRSTVISUAL is t if and only if the previous command was
 the first visual paste (i.e. before any paste-pop).")
 
-(evil-define-local-var evil-last-undo-entry nil
-  "Information about the latest undo entry in the buffer.
-This should be a pair (OBJ . CONS) where OBJ is the entry as an
-object, and CONS is a copy of the entry.")
-
 (evil-define-local-var evil-current-insertion nil
   "Information about the latest insertion in insert state.
 This should be a pair (BEG . END) that describes the
@@ -1911,7 +1880,6 @@ would ignore `:close-all' actions and invoke the provided functions on
 
 ;;; Ex
 
-(define-obsolete-variable-alias 'evil-ex-map 'evil-ex-shortcut-map "1.15.0")
 (defvar evil-ex-shortcut-map (make-sparse-keymap)
   "Keymap for Ex.
 Key sequences bound in this map are immediately executed.")
@@ -1935,8 +1903,6 @@ when Ex is started interactively.")
 (defvar evil-ex-history nil
   "History of Ex commands.")
 
-(define-obsolete-variable-alias
-  'evil-ex-current-buffer 'evil-ex-original-buffer "1.15.0")
 (defvar evil-ex-original-buffer nil
   "Buffer that was current when the Evil command line was started.")
 

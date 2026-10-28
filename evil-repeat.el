@@ -232,15 +232,6 @@ buffer is known and different from the current buffer."
            (repeat-type (assq type evil-repeat-types)))
       (if repeat-type (cdr repeat-type) type))))
 
-(defun evil-repeat-type (command &optional default)
-  "Return the :repeat property of COMMAND.
-If COMMAND doesn't have this property, return DEFAULT."
-  (declare (obsolete evil--repeat-type "1.15.0"))
-  (when (functionp command) ; ignore keyboard macros
-    (let* ((type (evil-get-command-property command :repeat default))
-           (repeat-type (assq type evil-repeat-types)))
-      (if repeat-type (cdr repeat-type) type))))
-
 (defun evil-repeat-force-abort-p (repeat-type)
   "Whether the current command should abort the recording of repeat information.
 Return non-nil if so."
