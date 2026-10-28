@@ -37,14 +37,10 @@
 (declare-function evil-replace-state-p "evil-states")
 (declare-function evil-set-jump "evil-jumps")
 
-;;; Compatibility with different Emacs versions
-
-;; x-set-selection and x-get-selection have been deprecated since 25.1
-;; by gui-set-selection and gui-get-selection
-(defalias 'evil-get-selection
-  (if (fboundp 'gui-get-selection) 'gui-get-selection 'x-get-selection))
-(defalias 'evil-set-selection
-  (if (fboundp 'gui-set-selection) 'gui-set-selection 'x-set-selection))
+(define-obsolete-function-alias
+  'evil-get-selection #'gui-get-selection "1.15.0")
+(define-obsolete-function-alias
+  'evil-set-selection #'gui-set-selection "1.15.0")
 
 (defmacro evil-with-delay (condition hook &rest body)
   "Execute BODY when CONDITION becomes true, checking with HOOK.
@@ -93,11 +89,7 @@ otherwise prepend it to the list.
   `(progn
      ,@(cl-loop
         for (key val) on elements by #'cddr collect
-        (if (< emacs-major-version 26)
-            (macroexp-let2* nil ((k key) (p `(assoc ,k ,alist)))
-              `(if ,p (setcdr ,p ,val)
-                 (push (cons ,k ,val) ,alist)))
-          `(setf (alist-get ,key ,alist nil nil #'equal) ,val)))
+        `(setf (alist-get ,key ,alist nil nil #'equal) ,val))
      ,alist))
 
 ;; custom version of `delete-if'
@@ -1360,7 +1352,7 @@ last successful match (that caused COUNT to reach zero)."
   ;; Always use the default `forward-sexp-function'. This is important
   ;; for modes that use a custom one like `python-mode'.
   ;; (addresses #364)
-  (let (forward-sexp-function up-list-function)
+  (let (forward-sexp-function)
     (with-syntax-table (copy-syntax-table (syntax-table))
       (modify-syntax-entry open (format "(%c" close))
       (modify-syntax-entry close (format ")%c" open))
@@ -1966,24 +1958,8 @@ The following special registers are supported.
               (and (< reg (length kill-ring))
                    (current-kill reg t))))
            ((memq register '(?* ?+))
-            (let ((what (if (eq register ?*) 'PRIMARY 'CLIPBOARD)))
-              (if (eval-when-compile (>= emacs-major-version 29))
-                  (gui--selection-value-internal what)
-                ;; The following code is based on `x-selection-value-internal'
-                ;; (now `gui--selection-value-internal') circa Emacs 24. We're
-                ;; unsure why exactly it's duplicated here, and it's possible
-                ;; it needn't be for newer versions of Emacs.
-                (let ((request-type (or (bound-and-true-p x-select-request-type)
-                                        '(UTF8_STRING COMPOUND_TEXT STRING)))
-                      text)
-                  (unless (consp request-type)
-                    (setq request-type (list request-type)))
-                  (while (and request-type (not text))
-                    (setq text (ignore-errors
-                                 (evil-get-selection what (pop request-type)))))
-                  (when text
-                    (remove-text-properties 0 (length text) '(foreign-selection nil) text))
-                  text))))
+            (gui--selection-value-internal
+             (if (eq register ?*) 'PRIMARY 'CLIPBOARD)))
            ((eq register ?\C-W)
             (with-current-buffer
                 (or evil-ex-original-buffer
@@ -2104,8 +2080,8 @@ register instead of replacing its content."
             interprogram-cut-function)
         (current-kill (- register ?1))
         (setcar kill-ring-yank-pointer text))))
-   ((eq register ?*) (evil-set-selection 'PRIMARY text))
-   ((eq register ?+) (evil-set-selection 'CLIPBOARD text))
+   ((eq register ?*) (gui-set-selection 'PRIMARY text))
+   ((eq register ?+) (gui-set-selection 'CLIPBOARD text))
    ((eq register ?-) (setq evil-last-small-deletion text))
    ((eq register ?_) nil) ; the black hole register
    ((and (<= ?A register) (<= register ?Z))

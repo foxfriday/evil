@@ -425,12 +425,6 @@ Based on `evil-enclose-ace-jump-for-motion'."
   (define-key evil-motion-state-map
     (vector 'remap command) (intern-soft (format "evil-%s" command))))
 
-;;; nXhtml/mumamo
-;; ensure that mumamo does not toggle evil through its globalized mode
-(eval-after-load 'mumamo
-  '(with-no-warnings
-     (push 'evil-mode-cmhh mumamo-change-major-mode-no-nos)))
-
 ;; visual-line-mode integration
 (when evil-respect-visual-line-mode
   (evil-define-minor-mode-key 'motion 'visual-line-mode

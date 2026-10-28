@@ -411,7 +411,7 @@ otherwise exit Visual state."
                (display-selections-p)
                (not (eq evil-visual-selection 'block)))
       (with-current-buffer buf
-        (evil-set-selection 'PRIMARY (buffer-substring-no-properties
+        (gui-set-selection 'PRIMARY (buffer-substring-no-properties
                                       evil-visual-beginning
                                       evil-visual-end))))))
 

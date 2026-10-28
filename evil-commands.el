@@ -828,16 +828,8 @@ If called with a prefix argument, provide a prompt
 for specifying the tag."
   :jump t
   (interactive "P")
-  (cond
-   ((fboundp 'xref-find-definitions)
-    (let ((xref-prompt-for-identifier arg))
-      (call-interactively #'xref-find-definitions)))
-   ((fboundp 'find-tag)
-    (if arg (call-interactively #'find-tag)
-      (let ((tag (funcall (or find-tag-default-function
-                              (get major-mode 'find-tag-default-function)
-                              #'find-tag-default))))
-        (find-tag (or tag (user-error "No tag found around point"))))))))
+  (let ((xref-prompt-for-identifier arg))
+    (call-interactively #'xref-find-definitions)))
 
 (evil-define-motion evil-lookup ()
   "Look up the keyword at point.
@@ -4494,11 +4486,7 @@ The \"!\" argument means to sort in reverse order."
   "Toggle side windows, evaluate BODY, restore side windows."
   (declare (indent defun) (debug (&rest form)))
   (let ((sides (make-symbol "sidesvar")))
-    `(let ((,sides (and (fboundp 'window-toggle-side-windows)
-                        (window-with-parameter 'window-side))))
-       ;; The compiler doesn't understand that all uses are protected
-       ;; by `fboundp' :-(
-       (declare-function window-toggle-side-windows "window")
+    `(let ((,sides (window-with-parameter 'window-side)))
        (when ,sides
          (window-toggle-side-windows))
        (unwind-protect
@@ -4845,13 +4833,7 @@ If ARG is empty, maximize the current window height."
   (interactive "<wc>")
   (let ((original-window (selected-window)))
     (evil-window-next count)
-    (if (fboundp 'window-swap-states)
-        (window-swap-states nil original-window t)
-      (let* ((other-window (selected-window))
-             (original-state (window-state-get original-window))
-             (other-state (window-state-get other-window)))
-        (window-state-put other-state original-window t)
-        (window-state-put original-state other-window t)))))
+    (window-swap-states nil original-window t)))
 
 (evil-define-command evil-window-move-very-top ()
   "Close the current window, split the upper-left one horizontally
@@ -5091,8 +5073,8 @@ DO-MOUSE-DRAG-REGION-POST-PROCESS should only be used by
                 (put 'mouse-2 'event-kind 'mouse-click)))
             (push event unread-command-events)))))))
 
-;; This function is a plain copy of `mouse--drag-set-mark-and-point',
-;; which is only available in Emacs 24
+;; Like `mouse--drag-set-mark-and-point', but using
+;; `evil-mouse-start-end'.
 (defun evil-mouse--drag-set-mark-and-point (start click click-count)
   (let* ((range (evil-mouse-start-end start click click-count))
          (beg (nth 0 range))
@@ -5108,8 +5090,8 @@ DO-MOUSE-DRAG-REGION-POST-PROCESS should only be used by
            (set-mark beg)
            (goto-char end)))))
 
-;; This function is a plain copy of `mouse--remap-link-click-p',
-;; which is only available in Emacs 23
+;; A copy of `mouse--remap-link-click-p', which is no longer
+;; available in Emacs.
 (defun evil-mouse--remap-link-click-p (start-event end-event)
   (or (and (eq mouse-1-click-follows-link 'double)
            (= (event-click-count start-event) 2))

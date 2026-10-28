@@ -136,9 +136,8 @@
     (activate-input-method evil-input-method)
     (evil-change-state nil)))
 
-;; Make the variable permanent local.  This is particular useful in
-;; conjunction with nXhtml/mumamo because mumamo does not touch these
-;; variables.
+;; Make the variable permanent local, so that Evil stays enabled when
+;; the major mode changes.
 (put 'evil-local-mode 'permanent-local t)
 
 (defun turn-on-evil-mode ()
@@ -165,30 +164,19 @@ To enable Evil globally, do (evil-mode)."
         (evil-disabled-buffer-p)
         (evil-local-mode))))
 
-(defalias 'evil--fundamental-mode #'fundamental-mode)
-
 (defvar evil--advices ())
 
 ;;;###autoload (autoload 'evil-mode "evil" nil t)
 (define-globalized-minor-mode evil-mode evil-local-mode evil-initialize
   :group 'evil)
 
-;; `define-globalized-minor-mode' supports a BODY argument but only since
-;; GNU Emacs 27.1, so resort to this ugly advice in the mean time.
+;; Run after `evil-mode' and its hooks, which a BODY argument to
+;; `define-globalized-minor-mode' would not.
 (define-advice evil-mode (:after (&optional _arg) body)
-  ;; Hooks used to not run in Fundamental buffers (bug#23827), so
-  ;; other measures are necessary to initialize Evil there. When Evil
-  ;; is enabled globally, the default value of `major-mode' is set to
-  ;; the `evil--fundamental-mode' alias, sidestepping the restriction.
   (if evil-mode
       (progn
-        (and (eval-when-compile (version< emacs-version "26.1"))
-             (eq (default-value 'major-mode) 'fundamental-mode)
-             (setq-default major-mode #'evil--fundamental-mode))
         (dolist (advice evil--advices) (apply #'advice-add advice))
         (with-no-warnings (evil-esc-mode 1)))
-    (when (eq (default-value 'major-mode) #'evil--fundamental-mode)
-      (setq-default major-mode 'fundamental-mode))
     (pcase-dolist (`(,funname ,_where ,adfun) evil--advices)
       (advice-remove funname adfun))
     (with-no-warnings (evil-esc-mode -1))))
