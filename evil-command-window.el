@@ -179,6 +179,7 @@ the current command to be edited."
     (if (eq evil-search-module 'evil-search)
         (progn
           (setq evil-ex-search-pattern (evil-ex-make-search-pattern result)
+                evil-ex-search-offset nil
                 evil-ex-search-direction (if forward 'forward 'backward))
           (unless (equal result (car evil-ex-search-history))
             (push result evil-ex-search-history))

@@ -3682,7 +3682,7 @@ REST is the unparsed remainder of TO."
                   (user-error "Expected @ after \\="))
                 (when (< (length rest) 2)
                   (user-error "Expected register after \\=@"))
-                (list (evil-get-register (aref rest 1))
+                (list (replace-quote (evil-get-register (aref rest 1)))
                       (substring rest 2)))
                ((eq char ?,)
                 (let* ((obj (read-from-string rest))

@@ -649,9 +649,9 @@ Note that this function ignores the whole-line property of PATTERN."
       (let* ((pnt (point))
              (ret (re-search-backward (evil-ex-pattern-regex pattern) nil t))
              (m (and ret (match-data))))
-        (if ret
-            (forward-char)
-          (goto-char (point-min)))
+        (cond
+         ((not ret) (goto-char (point-min)))
+         ((not (eobp)) (forward-char)))
         (let ((fwdret
                (re-search-forward (evil-ex-pattern-regex pattern) nil t)))
           (cond
@@ -726,7 +726,14 @@ direction by `evil-ex-search-direction'."
         ;; maybe skip end-of-line
         (and (not evil-move-beyond-eol) (eolp) (not (eobp))
              (forward-char)))
-      (let ((res (evil-ex-find-next nil nil (not evil-search-wrap))))
+      (let* ((start (point))
+             (res (evil-ex-find-next nil nil (not evil-search-wrap))))
+        ;; Searching backward, skip an empty match at point (e.g. ?^).
+        (when (and res (eq evil-ex-search-direction 'backward)
+                   (= (match-beginning 0) (match-end 0) start)
+                   (not (bobp)))
+          (backward-char)
+          (setq res (evil-ex-find-next nil nil (not evil-search-wrap))))
         (cond
          ((not res)
           (goto-char orig)
@@ -931,7 +938,9 @@ any error conditions."
   (let ((pattern-string (minibuffer-contents-no-properties))
         message)
     (with-selected-window (minibuffer-selected-window)
-      (goto-char (1+ evil-ex-search-start-point))
+      (goto-char (if (eq evil-ex-search-direction 'forward)
+                     (1+ evil-ex-search-start-point)
+                   (1- evil-ex-search-start-point)))
       (condition-case err
           (cl-destructuring-bind (success pattern offset)
               (evil-ex-search-full-pattern pattern-string
@@ -1122,7 +1131,8 @@ This handler highlights the pattern of the current substitution."
 
 (defun evil-ex-pattern-update-replacement (_hl overlay)
   "Update the replacement display."
-  (let ((repl (if evil-ex-substitute-current-replacement
+  ;; Don't evaluate \, replacements before the command is confirmed.
+  (let ((repl (if (stringp evil-ex-substitute-current-replacement)
                   (evil-match-substitute-replacement
                    evil-ex-substitute-current-replacement
                    (not case-replace))
@@ -1192,17 +1202,19 @@ is used. It is meant for :substitute commands with arguments."
             (if (eq evil-search-module 'evil-search)
                 (if (and evil-ex-last-was-search (memq ?r flags))
                     (and evil-ex-search-pattern
-                         (setq using-prev-pattern t)
+                         (setq using-prev-pattern evil-ex-search-pattern)
                          (evil-ex-pattern-regex evil-ex-search-pattern))
                   (and evil-ex-substitute-pattern
-                       (setq using-prev-pattern t)
+                       (setq using-prev-pattern evil-ex-substitute-pattern)
                        (evil-ex-pattern-regex evil-ex-substitute-pattern)))
               (if (eq case-fold-search t)
                   isearch-string
                 (concat isearch-string "\\C")))
             flags (remq ?r flags)))
     (when (and using-prev-pattern
-               (not (evil-ex-pattern-ignore-case evil-ex-search-pattern)))
+               (not (memq ?i flags))
+               (not (memq ?I flags))
+               (not (evil-ex-pattern-ignore-case using-prev-pattern)))
       (setq pattern (concat pattern "\\C")))
     ;; generate pattern
     (when pattern

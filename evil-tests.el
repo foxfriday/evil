@@ -10169,6 +10169,62 @@ but it works fine in `M-x ert-run-tests-interactively'."
       ("Vj" ":retab" [return])
       "def foo():\n    while True:\n\t\treturn\n")))
 
+(ert-deftest evil-test-search-review-fixes ()
+  "Regression tests for search, substitute and jump fixes."
+  :tags '(evil search)
+  (evil-without-display
+    (evil-select-search-module 'evil-search-module 'evil-search)
+    (ert-info ("Backward search for an empty match moves on with n")
+      (evil-test-buffer
+        "abc\nxyz\nqrs\nt[u]v"
+        ("?^" [return])
+        "abc\nxyz\nqrs\n[t]uv"
+        ("n")
+        "abc\nxyz\n[q]rs\ntuv"
+        ("n")
+        "abc\n[x]yz\nqrs\ntuv"))
+    (ert-info ("N on the empty last line does not signal")
+      (evil-test-buffer
+        "abc\nabc\n[]"
+        ("/^" [return])
+        (goto-char (point-max))
+        ("N")
+        "abc\n[a]bc\n"))
+    (ert-info ("The i flag overrides the case of a reused pattern")
+      (evil-test-buffer
+        "[f]oo FOO\n"
+        (setq-local evil-ex-search-case 'sensitive)
+        ("/foo" [return] ":s//X/gi" [return])
+        "[X] X\n"))
+    (ert-info ("\\=@r inserts the register literally")
+      (evil-test-buffer
+        "[a]bc\n"
+        (evil-set-register ?a "x\\1y")
+        (":s/\\(b\\)/\\=@a/" [return])
+        "[a]x\\1yc\n"))
+    (ert-info ("Lisp replacements are not evaluated by the preview")
+      (evil-test-buffer
+        "[a]bc\n"
+        (let ((evaluated 0))
+          (cl-letf (((symbol-function 'evil-test--count)
+                     (lambda () (cl-incf evaluated) "Q")))
+            (setq evil-ex-substitute-current-replacement
+                  (evil-compile-replacement "\\,(evil-test--count)"))
+            (evil-ex-pattern-update-replacement nil (make-overlay 1 1))
+            (should (= evaluated 0))))))))
+
+(ert-deftest evil-test-jump-branch ()
+  "A new jump after C-o drops the newer jumps, not the oldest."
+  :tags '(evil jumps)
+  (let ((evil--jumps-buffer-targets "\\*\\(new\\|scratch\\|test\\)\\*"))
+    (evil-select-search-module 'evil-search-module 'evil-search)
+    (evil-test-buffer
+      "[a] b c d e f g h"
+      ("/b" [return] "/c" [return] "/d" [return] "/e" [return])
+      ("\C-o\C-o" "/g" [return])
+      ("\C-o\C-o\C-o\C-o")
+      "[a] b c d e f g h")))
+
 (provide 'evil-tests)
 
 ;;; evil-tests.el ends here

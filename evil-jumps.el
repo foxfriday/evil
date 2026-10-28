@@ -161,6 +161,9 @@ Otherwise the jump commands act only within the current buffer."
                 (switch-to-buffer file-name)
               (find-file file-name)))
           (setq evil--jumps-jumping nil)
+          (when (and (markerp pos) (not (marker-buffer pos)))
+            ;; The buffer was killed and the file reopened.
+            (setq pos (point)))
           (goto-char pos)
           (setf (evil-jumps-struct-idx (evil--jumps-get-current)) idx)
           (run-hooks 'evil-jumps-post-jump-hook))))))
@@ -234,7 +237,7 @@ POS defaults to point."
              (target-list (evil--jumps-get-jumps struct))
              (idx (evil-jumps-struct-idx struct)))
         (cl-loop repeat idx
-                 do (ring-remove target-list))
+                 do (ring-remove target-list 0))
         (setf (evil-jumps-struct-idx struct) -1))
       (when pos
         (goto-char pos))
