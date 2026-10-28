@@ -1,30 +1,15 @@
 EMACS ?= emacs
-SED ?= sed
-FILES = $(filter-out evil-pkg.el,$(wildcard evil*.el))
-VERSION := $(shell $(SED) -n '/^;\+ \+Version: *\(.*\)/{s//\1/p;q}' evil.el)
 PROFILER =
 TAG =
 EASK ?= eask
 
-ELCFILES = $(FILES:.el=.elc)
-
-.PHONY: all compile docstrings doc clean tests test emacs term terminal profiler indent elpa version
+.PHONY: all compile clean tests test emacs term terminal profiler indent
 
 # Byte-compile Evil.
 all: compile
 
 compile:
 	$(EASK) compile
-
-# Documentation.
-docstrings:
-	@$(EMACS) --script scripts/evil-extract-docstrings
-
-doc: docstrings
-	@$(MAKE) -C doc texinfo
-
-info: doc
-	@$(MAKE) -C doc info
 
 # Delete byte-compiled files etc.
 clean:
@@ -63,18 +48,3 @@ profiler:
 indent: clean
 	$(EASK) run command indent
 
-evil-pkg.el: evil.el
-	$(EMACS) --batch -l package $^ \
-		--eval "(package-generate-description-file (package-buffer-info) \"$@\")"
-
-# Create an ELPA package.
-elpa: evil-pkg.el
-	$(EASK) package
-
-# Change the version using make VERSION=x.y.z
-version:
-	@$(EMACS) --script scripts/evilupdate "${VERSION}"
-
-# Change the version using make VERSION=x.y.z, but do not post to the newsgroup
-nversion:
-	@$(EMACS) --script scripts/evilupdate nonews "${VERSION}"
