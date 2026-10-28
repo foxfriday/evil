@@ -8,7 +8,7 @@
 (keywords "emulations")
 
 (package-file "evil.el")
-(files "evil-*.el" '(:exclude "*-tests.el" "*-pkg.el"))
+(files "evil-*.el" '(:exclude "*-pkg.el"))
 
 (script "test" "echo \"Error: no test specified\" && exit 1")
 
@@ -20,16 +20,19 @@
 
 (eask-defcommand test
   "Basic tests."
+  (add-to-list 'load-path (expand-file-name "test"))
   (require 'evil-tests)
   (evil-tests-initialize nil nil))
 
 (eask-defcommand terminal
   "Load Evil in a terminal Emacs and run all tests."
+  (add-to-list 'load-path (expand-file-name "test"))
   (require 'evil-tests)
   (evil-tests-initialize nil nil t))
 
 (eask-defcommand profiler
   "Run all tests with profiler."
+  (add-to-list 'load-path (expand-file-name "test"))
   (require 'evil-tests)
   (evil-mode 1)
   (evil-tests-initialize nil t))

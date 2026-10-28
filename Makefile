@@ -1,6 +1,6 @@
 EMACS ?= emacs
 SED ?= sed
-FILES = $(filter-out evil-test-helpers.el evil-tests.el evil-pkg.el,$(wildcard evil*.el))
+FILES = $(filter-out evil-pkg.el,$(wildcard evil*.el))
 VERSION := $(shell $(SED) -n '/^;\+ \+Version: *\(.*\)/{s//\1/p;q}' evil.el)
 PROFILER =
 TAG =
@@ -45,7 +45,7 @@ tests: compile
 
 # Load Evil in a fresh instance of Emacs and run all tests.
 emacs:
-	$(EMACS) -Q -L . -l evil-tests.el \
+	$(EMACS) -Q -L . -L test -l evil-tests \
 		--eval "(evil-mode 1)" \
 		--eval "(evil-tests-initialize '(${TAG}) '(${PROFILER}) t)"
 

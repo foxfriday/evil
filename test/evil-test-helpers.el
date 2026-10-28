@@ -27,8 +27,9 @@
 ;;; Commentary:
 
 ;; This file contains helper functions for writing tests for
-;; evil-mode.  These helpers can also be used by other packages which
-;; extend evil-mode.
+;; evil-mode.  It is not installed with the package; other packages
+;; which extend evil-mode can use it by adding Evil's test directory
+;; to `load-path'.
 
 ;; To write a test use `evil-test-buffer':
 

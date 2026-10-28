@@ -53,4 +53,4 @@ Bug reports and feature requests should be made on the
    but don't be afraid of suggesting code enhancements in case you
    encounter suboptimal code.
 3. If your pull requests adds a feature or fixes a regression, add
-   tests covering it to `evil-tests.el`.
+   tests covering it to `test/evil-tests.el`.
