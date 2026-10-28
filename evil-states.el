@@ -115,15 +115,20 @@ commands opening a new line."
   (cond
    ((evil-insert-state-p)
     (add-hook 'post-command-hook #'evil-maybe-remove-spaces)
-    (add-hook 'pre-command-hook #'evil-insert-repeat-hook)
+    (setq evil-insert-repeat-info nil)
+    (add-hook 'pre-command-hook #'evil-insert-repeat-hook nil t)
     (setq evil-maybe-remove-spaces t)
+    (setq evil--insert-vcount-start
+          (and evil-insert-vcount
+               (list (point-marker)
+                     (- (point) (line-beginning-position))
+                     (- (line-end-position) (point)))))
     (unless (eq evil-want-fine-undo t)
       (evil-start-undo-step)))
    (t
     (remove-hook 'post-command-hook #'evil-maybe-remove-spaces)
-    (remove-hook 'pre-command-hook #'evil-insert-repeat-hook)
+    (remove-hook 'pre-command-hook #'evil-insert-repeat-hook t)
     (evil-maybe-remove-spaces t)
-    (setq evil-insert-repeat-info evil-repeat-info)
     (evil-set-marker ?^ nil t)
     (unless (eq evil-want-fine-undo t)
       (evil-end-undo-step))
@@ -135,39 +140,61 @@ commands opening a new line."
 (defun evil-insert-repeat-hook ()
   "Record insertion keys in `evil-insert-repeat-info'."
   (setq evil-insert-repeat-info (last evil-repeat-info))
-  (remove-hook 'pre-command-hook #'evil-insert-repeat-hook))
+  (remove-hook 'pre-command-hook #'evil-insert-repeat-hook t))
 (put 'evil-insert-repeat-hook 'permanent-local-hook t)
 
-(eval-when-compile
-  ;; TODO remove this once support for emacs 26 is dropped
-  (unless (fboundp 'combine-change-calls)
-    (defmacro combine-change-calls (_beg _end &rest body) `(progn ,@body))))
+(defun evil--block-insertion-text (start)
+  "Return the text inserted on the first line of a block insertion.
+START is the value of `evil--insert-vcount-start'.  Like Vim, return
+nil if point left the line or text before START was deleted."
+  (cl-destructuring-bind (marker offset tail) start
+    (prog1
+        (when (and (eq (marker-buffer marker) (current-buffer))
+                   (<= (line-beginning-position) marker (line-end-position))
+                   (= (- marker (line-beginning-position)) offset))
+          (let ((len (- (line-end-position) marker tail)))
+            (when (> len 0)
+              (buffer-substring-no-properties marker (+ marker len)))))
+      (set-marker marker nil))))
+
 (declare-function evil-execute-repeat-info "evil-repeat")
 (defun evil-cleanup-insert-state ()
   "Called when Insert or Replace state is about to be exited.
 Handles the repeat-count of the insertion command."
-  (when evil-insert-count
-    (let (pre-command-hook post-command-hook)
-      (dotimes (_ (1- evil-insert-count))
-        (when evil-insert-lines
-          (evil-insert-newline-below)
-          (when evil-auto-indent
-            (indent-according-to-mode)))
-        (evil-execute-repeat-info (cdr evil-insert-repeat-info)))))
-  (when evil-insert-vcount
-    (let ((buffer-invisibility-spec
+  ;; Consume the insertion parameters so that they cannot leak into a
+  ;; later insertion that does not set them.
+  (let ((count evil-insert-count)
+        (lines evil-insert-lines)
+        (vcount evil-insert-vcount)
+        (start evil--insert-vcount-start)
+        (repeat-info (cdr evil-insert-repeat-info)))
+    (setq evil-insert-count nil
+          evil-insert-lines nil
+          evil-insert-vcount nil
+          evil--insert-vcount-start nil
+          evil-insert-repeat-info nil)
+    (when count
+      (let (pre-command-hook post-command-hook)
+        (dotimes (_ (1- count))
+          (when lines
+            (evil-insert-newline-below)
+            (when evil-auto-indent
+              (indent-according-to-mode)))
+          (evil-execute-repeat-info repeat-info))))
+    (let ((text (and vcount start (evil--block-insertion-text start)))
+          (buffer-invisibility-spec
            (if (listp buffer-invisibility-spec)
                ;; make all lines hidden by hideshow temporarily visible
                (cl-remove-if (lambda (x) (eq (or (car-safe x) x) 'hs))
                              buffer-invisibility-spec)
              buffer-invisibility-spec)))
-      (cl-destructuring-bind (line col vcount) evil-insert-vcount
-        (save-excursion
-          (combine-change-calls ; For performance
-              (progn (goto-char (point-min))
-                     (line-beginning-position line))
-              (line-end-position (+ line vcount -1))
-            (let (pre-command-hook post-command-hook) ; For performance
+      (when text
+        (cl-destructuring-bind (line col vcount) vcount
+          (save-excursion
+            (combine-change-calls ; For performance
+                (progn (goto-char (point-min))
+                       (line-beginning-position line))
+                (line-end-position (+ line vcount -1))
               (dotimes (v (1- vcount))
                 (goto-char (point-min))
                 (forward-line (+ line v))
@@ -179,8 +206,7 @@ Handles the repeat-count of the insertion command."
                   (if (integerp col)
                       (move-to-column col t)
                     (funcall col))
-                  (dotimes (_ (or evil-insert-count 1))
-                    (evil-execute-repeat-info (cdr evil-insert-repeat-info)))))))))))
+                  (insert text)))))))))
   (and evil-want-fine-undo (evil-end-undo-step)))
 
 ;;; Visual state
@@ -863,14 +889,14 @@ CORNER defaults to `upper-left'."
    ((evil-replace-state-p)
     (overwrite-mode 1)
     (add-hook 'pre-command-hook #'evil-replace-pre-command nil t)
-    (add-hook 'pre-command-hook #'evil-insert-repeat-hook)
+    (setq evil-insert-repeat-info nil)
+    (add-hook 'pre-command-hook #'evil-insert-repeat-hook nil t)
     (unless (eq evil-want-fine-undo t)
       (evil-start-undo-step)))
    (t
     (overwrite-mode -1)
     (remove-hook 'pre-command-hook #'evil-replace-pre-command t)
-    (remove-hook 'pre-command-hook #'evil-insert-repeat-hook)
-    (setq evil-insert-repeat-info evil-repeat-info)
+    (remove-hook 'pre-command-hook #'evil-insert-repeat-hook t)
     (evil-set-marker ?^ nil t)
     (unless (eq evil-want-fine-undo t)
       (evil-end-undo-step))

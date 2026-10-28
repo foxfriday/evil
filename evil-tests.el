@@ -1661,7 +1661,36 @@ New Tex[t]
       ("\C-v" "jj" "I" "zulu" [escape])
       "zul[u]alpha\nzulubravo\nzulucharlie\ndelta\necho\nfoxtrot\ngolf"
       ("/delta" [return] ".")
-      "zulualpha\nzulubravo\nzulucharlie\nzul[u]delta\nzuluecho\nzulufoxtrot\ngolf")))
+      "zulualpha\nzulubravo\nzulucharlie\nzul[u]delta\nzuluecho\nzulufoxtrot\ngolf"))
+  (ert-info ("Inserted text is copied, not replayed as keys")
+    (evil-test-buffer
+      "[a]bc\nabc\nabc"
+      ("\C-v" "jj" "IX")
+      (evil-repeat-abort)               ; e.g. minibuffer use mid-insert
+      ("Y" [escape])
+      "X[Y]abc\nXYabc\nXYabc"))
+  (ert-info ("Not repeated when the insertion leaves the line")
+    (evil-test-buffer
+      "[a]bc\nabc\nabc"
+      ("\C-v" "jj" "IX" [return] "Y" [escape])
+      "X\n[Y]abc\nabc\nabc"))
+  (ert-info ("Not repeated when text before the block is deleted")
+    (evil-test-buffer
+      "ab[c]\nabc\nabc"
+      ("\C-v" "jj" "I" [backspace] "X" [escape])
+      "a[X]c\nabc\nabc"))
+  (ert-info ("Block insertion does not leak into later insertions")
+    (evil-test-buffer
+      "[a]bc\nabc\nabc\nxyz"
+      (define-key evil-normal-state-local-map "gz" #'evil-insert-state)
+      ("\C-v" "jj" "IX" [escape] "G" "gzZ" [escape])
+      "Xabc\nXabc\nXabc\n[Z]xyz"))
+  (ert-info ("Insertion count does not leak into later insertions")
+    (evil-test-buffer
+      "[a]bc\nxyz"
+      (define-key evil-normal-state-local-map "gz" #'evil-insert-state)
+      ("3iA" [escape] "j" "gzZ" [escape])
+      "AAAabc\nxy[Z]z")))
 
 (ert-deftest evil-test-repeat-digraph ()
   "Test repeat of insertion of a digraph."

@@ -1627,6 +1627,12 @@ started and COLUMN is either a number or function determining the
 column where the repeated insertions should take place. COUNT is
 number of repeats (including the original insertion).")
 
+(evil-define-local-var evil--insert-vcount-start nil
+  "Where an insertion repeated on following lines started.
+This is a list (MARKER OFFSET TAIL) where MARKER is the start of the
+insertion, OFFSET its distance from the beginning of the line and TAIL
+the number of characters following it on that line.")
+
 (defvar evil-insert-skip-empty-lines nil
   "Non-nil of the current insertion should not take place on
   lines at which the insertion point is behind the end of the
