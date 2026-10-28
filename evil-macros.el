@@ -75,8 +75,11 @@ The return value is a list (BEG END TYPE)."
                  ;; some operators depend on succeeding motions, in
                  ;; particular for `evil-forward-char' (e.g., used by
                  ;; `evil-substitute'), therefore we let end-of-line
-                 ;; and end-of-buffer pass
-                 (if (memq (car err) '(end-of-line end-of-buffer))
+                 ;; and end-of-buffer pass, and beginning-of-line so
+                 ;; that a count larger than the line (e.g. `d5h')
+                 ;; stops at the line start as in Vim
+                 (if (memq (car err) '(beginning-of-line end-of-line
+                                       end-of-buffer))
                      (message (error-message-string err))
                    (signal (car err) (cdr err)))))
               (cond

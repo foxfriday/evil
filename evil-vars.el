@@ -91,8 +91,8 @@ KEY must be readable by `read-kbd-macro'."
           (let ((map (symbol-value (car pair)))
                 (fun (cadr pair)))
             (when (keymapp map)
-              (define-key map key fun)
-              (define-key map old-key nil))))))))
+              (define-key map old-key nil)
+              (define-key map key fun))))))))
 
 (defun evil-set-custom-state-maps (var pending-var key _make newlist)
   "Change the list of special keymaps.

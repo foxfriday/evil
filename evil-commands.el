@@ -290,7 +290,10 @@ If point is at the end of the buffer and cannot be moved then
   (let ((thing (if bigword 'evil-WORD 'evil-word))
         (orig (point))
         (count (or count 1)))
-    (evil-signal-at-bob-or-eob count)
+    ;; An operator may still act on the last character, e.g. dw on a
+    ;; one-letter word at the end of the buffer.
+    (unless (and (evil-operator-state-p) (> count 0) (not (eobp)))
+      (evil-signal-at-bob-or-eob count))
     (cond
      ;; default motion, beginning of next word
      ((not (evil-operator-state-p))
@@ -1684,7 +1687,7 @@ of the block."
        ((= opoint (point)) (evil-open-above 1))
        (t (evil-open-below 1))))
      ((eq type 'block)
-      (evil-insert 1 nlines))
+      (evil-insert 1 nlines t))
      (t (evil-insert 1)))
     (setq evil-this-register nil)))
 
@@ -2390,7 +2393,11 @@ leave the cursor just after the new text."
                      (eq 'line type)
                      (> (length text) 0)
                      (not (eq ?\n (aref text (1- (length text))))))
-            (cl-decf end))
+            ;; On a last line without a newline there is no NL to keep:
+            ;; replace just the line's text.
+            (if (eq ?\n (char-before end))
+                (cl-decf end)
+              (setq type 'exclusive)))
           (evil-visual-rotate 'upper-left)
           (evil-delete beg end type (unless evil-kill-on-visual-paste ?_))
           (when (and (eq yank-handler #'evil-yank-line-handler)
@@ -3202,14 +3209,15 @@ The search is unbounded, i.e., the pattern is not wrapped in
 
 (defun evil-goto-definition-xref (_string position)
   "Find definition at POSITION with xref."
-  (when (fboundp 'xref-find-definitions)
-    (let ((identifier (save-excursion
-                        (goto-char position)
-                        (xref-backend-identifier-at-point (xref-find-backend)))))
-      (condition-case nil
-          (progn (xref-find-definitions identifier)
-                 t)
-        (user-error nil)))))
+  ;; Catch all errors: e.g. the etags backend's methods are not
+  ;; defined until etags.el is loaded, so let the next function try.
+  (condition-case nil
+      (let ((identifier (save-excursion
+                          (goto-char position)
+                          (xref-backend-identifier-at-point (xref-find-backend)))))
+        (xref-find-definitions identifier)
+        t)
+    (error nil)))
 
 (defun evil-goto-definition-search (string _position)
   "Find definition for STRING with evil-search."

@@ -119,6 +119,7 @@
 (define-key evil-normal-state-map "\C-r" 'evil-redo)
 
 ;; window commands
+(autoload 'ffap-other-window "ffap" nil t)
 (define-prefix-command 'evil-window-map)
 (define-key evil-window-map "b" 'evil-window-bottom-right)
 (define-key evil-window-map "c" 'evil-window-delete)

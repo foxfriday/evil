@@ -52,7 +52,7 @@
 
 (evil-add-hjkl-bindings dictionary-mode-map 'motion
   "?" 'dictionary-help        ; "h"
-  "C-o" 'dictionary-previous) ; "l"
+  (kbd "C-o") 'dictionary-previous) ; "l"
 
 ;;; Dired
 
@@ -115,7 +115,7 @@
 
 ;;; ELP
 
-(advice-add 'elp-results :after #'evil--set-motion-state)
+(evil--advice-add 'elp-results :after #'evil--set-motion-state)
 (defun evil--set-motion-state (&rest _)
   (evil-motion-state))
 

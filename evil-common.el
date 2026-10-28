@@ -587,11 +587,13 @@ Return the digraph from `evil-digraph', else return second char."
         (overlay-put overlay 'after-string
                      #("?" 0 1 (face minibuffer-prompt cursor 1)))
         (setq char1 (read-key))
+        (unless (characterp char1) (keyboard-quit))
         (overlay-put overlay 'after-string
                      (propertize (char-to-string char1)
                                  'face 'minibuffer-prompt
                                  'cursor 1))
         (setq char2 (read-key))
+        (unless (characterp char2) (keyboard-quit))
 
         (or (evil-digraph (list char1 char2))
             ;; use the last character if undefined

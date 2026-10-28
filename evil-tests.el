@@ -10283,6 +10283,64 @@ but it works fine in `M-x ert-run-tests-interactively'."
       ("yyjdd\"0p.")
       "aaa\nccc\naaa\n[a]aa")))
 
+(ert-deftest evil-test-state-review-fixes ()
+  "Regression tests for motion, operator and state fixes."
+  :tags '(evil)
+  (ert-info ("Replacing a tab or a wide character")
+    (evil-test-buffer
+      "[a]\tb"
+      ("lRx" [escape])
+      "a[x]b")
+    (evil-test-buffer
+      "[a]\tb"
+      ("lRx" [backspace] [escape])
+      "[a]\tb")
+    (evil-test-buffer
+      "[日]本語"
+      ("Ra" [escape])
+      "[a]本語"))
+  (ert-info ("dw and cw on a one-letter word at the end of the buffer")
+    (evil-test-buffer
+      "foo [b]"
+      ("dw")
+      "foo[ ]")
+    (evil-test-buffer
+      "foo [b]"
+      ("cwX" [escape])
+      "foo [X]"))
+  (ert-info ("A backward count larger than the line stops at its start")
+    (evil-test-buffer
+      "a[b]c"
+      ("5X")
+      "[b]c")
+    (evil-test-buffer
+      "a[b]c"
+      ("d5h")
+      "[b]c")
+    (evil-test-buffer
+      "[a]bc\ndef"
+      (should-error (execute-kbd-macro "dk"))
+      "[a]bc\ndef"))
+  (ert-info ("Charwise text over a last line without a newline")
+    (evil-test-buffer
+      "[a]bc\ndef"
+      ("yiwjVp")
+      "abc\nab[c]"))
+  (ert-info ("Blockwise change leaves short lines alone")
+    (evil-test-buffer
+      "[a]bcdef\nab\nabcdef"
+      ("llll\C-vjjcZ" [escape])
+      "abcd[Z]f\nab\nabcdZf"))
+  (ert-info ("Setting evil-toggle-key to its current value keeps it bound")
+    (let ((key evil-toggle-key))
+      (customize-set-variable 'evil-toggle-key key)
+      (should (eq (lookup-key evil-motion-state-map (kbd key))
+                  #'evil-emacs-state))))
+  (ert-info ("`> without a previous Visual selection")
+    (evil-test-buffer
+      "[a]bc"
+      (should-error (evil-get-marker ?>) :type 'user-error))))
+
 (ert-deftest evil-test-command-review-fixes ()
   "Regression tests for command, register and integration fixes."
   :tags '(evil)

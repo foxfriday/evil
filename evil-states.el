@@ -797,6 +797,8 @@ If SELECTION is specified, return the type of that instead."
   "Go to the last line of the Visual selection.
 This position may differ from `evil-visual-end' depending on
 the selection type, and is contained in the selection."
+  (unless (and (markerp evil-visual-end) (marker-position evil-visual-end))
+    (user-error "Marker `>' is not set"))
   (let ((range (evil-contract-range (evil-visual-range))))
     (goto-char (evil-range-end range))))
 
@@ -910,7 +912,16 @@ CORNER defaults to `upper-left'."
           (prev (assq (point) evil-replace-alist)))
       (if prev
           (setcdr prev char)
-        (push (cons (point) char) evil-replace-alist)))))
+        (push (cons (point) char) evil-replace-alist))
+      ;; `overwrite-mode' replaces by display column, so a tab or a wide
+      ;; character would not be replaced one-for-one.  Turn it into a
+      ;; single space first; backspace restores the original.
+      (when (and char
+                 (eq this-command #'self-insert-command)
+                 (or (eq char ?\t) (> (char-width char) 1)))
+        (save-excursion
+          (delete-char 1)
+          (insert ?\s))))))
 (put 'evil-replace-pre-command 'permanent-local-hook t)
 
 (defun evil-replace-backspace ()
