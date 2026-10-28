@@ -10219,6 +10219,78 @@ but it works fine in `M-x ert-run-tests-interactively'."
             (evil-ex-pattern-update-replacement nil (make-overlay 1 1))
             (should (= evaluated 0))))))))
 
+(ert-deftest evil-test-command-review-fixes ()
+  "Regression tests for command, register and integration fixes."
+  :tags '(evil)
+  (ert-info (":0put inserts above the first line")
+    (evil-test-buffer
+      "a\n[b]"
+      (evil-set-register ?a "X\n")
+      (":0put a" [return])
+      "[X]\na\nb"))
+  (ert-info (":put and visual paste accept macro registers")
+    (evil-test-buffer
+      "[a]bc def"
+      (evil-set-register ?q [?x ?x])
+      ("ve\"qp")
+      "x[x] def")
+    (evil-test-buffer
+      "[a]bc"
+      (evil-set-register ?q [?x ?x])
+      (":put q" [return])
+      "abc\n[x]x"))
+  (ert-info ("Linewise visual paste of an empty register")
+    (evil-test-buffer
+      "[a]bc\ndef"
+      (evil-set-register ?a "")
+      ("V\"ap")
+      "[d]ef"))
+  (ert-info ("C-y on the first line and C-e on the last insert nothing")
+    (evil-test-buffer
+      "[a]bc\n"
+      ("i" (kbd "C-y") [escape])
+      "[a]bc\n")
+    (evil-test-buffer
+      "x\n[a]bc"
+      ("i" (kbd "C-e") [escape])
+      "x\n[a]bc"))
+  (ert-info (":print in an empty buffer")
+    (evil-test-buffer
+      "[]"
+      (":p" [return])
+      "[]"))
+  (ert-info ("Numbered registers count from the newest kill")
+    (evil-test-buffer
+      "[a]"
+      (let ((kill-ring (list "c" "b" "a"))
+            (kill-ring-yank-pointer nil))
+        (setq kill-ring-yank-pointer (cdr kill-ring))
+        (should (equal (evil-get-register ?1) "c"))
+        (should (equal (evil-get-register ?2) "b"))
+        (evil-set-register ?1 "NEW")
+        (should (equal kill-ring '("NEW" "b" "a")))
+        (evil-set-register ?5 "FIVE")
+        (should (equal kill-ring '("NEW" "b" "a" "FIVE"))))))
+  (ert-info (":bd keeps windows when killing is cancelled")
+    (evil-test-buffer
+      "[a]"
+      (let ((buf (current-buffer)))
+        (split-window)
+        (switch-to-buffer buf)
+        (let ((wins (length (window-list))))
+          (add-hook 'kill-buffer-query-functions #'ignore nil t)
+          (evil-delete-buffer buf)
+          (remove-hook 'kill-buffer-query-functions #'ignore t)
+          (should (buffer-live-p buf))
+          (should (= wins (length (window-list))))
+          (delete-other-windows)))))
+  (ert-info ("describe-char does not enable Evil")
+    (with-temp-buffer
+      (insert "x")
+      (goto-char (point-min))
+      (save-window-excursion (describe-char (point)))
+      (should-not evil-local-mode))))
+
 (ert-deftest evil-test-jump-branch ()
   "A new jump after C-o drops the newer jumps, not the oldest."
   :tags '(evil jumps)

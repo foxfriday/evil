@@ -298,8 +298,8 @@ This is the state the buffer came up in. If Evil is not activated
 then this function does nothing."
   :keep-visual t
   :suppress-operator t
-  (when evil-local-mode
-    (with-current-buffer (or buffer (current-buffer))
+  (with-current-buffer (or buffer (current-buffer))
+    (when evil-local-mode
       (evil-change-state (evil-initial-state-for-buffer buffer)
                          message))))
 

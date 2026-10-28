@@ -1954,9 +1954,7 @@ The following special registers are supported.
            ((eq register ?\")
             (current-kill 0))
            ((<= ?1 register ?9)
-            (let ((reg (- register ?1)))
-              (and (< reg (length kill-ring))
-                   (current-kill reg t))))
+            (nth (- register ?1) kill-ring))
            ((memq register '(?* ?+))
             (gui--selection-value-internal
              (if (eq register ?*) 'PRIMARY 'CLIPBOARD)))
@@ -2073,13 +2071,10 @@ register instead of replacing its content."
     (user-error "Can't modify read-only register"))
    ((eq register ?\") (kill-new text))
    ((<= ?1 register ?9)
-    (if (null kill-ring)
-        (kill-new text)
-      (let ((kill-ring-yank-pointer kill-ring-yank-pointer)
-            interprogram-paste-function
-            interprogram-cut-function)
-        (current-kill (- register ?1))
-        (setcar kill-ring-yank-pointer text))))
+    (let ((cell (nthcdr (- register ?1) kill-ring)))
+      (if cell
+          (setcar cell text)
+        (setq kill-ring (nconc kill-ring (list text))))))
    ((eq register ?*) (gui-set-selection 'PRIMARY text))
    ((eq register ?+) (gui-set-selection 'CLIPBOARD text))
    ((eq register ?-) (setq evil-last-small-deletion text))

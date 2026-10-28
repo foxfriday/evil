@@ -104,8 +104,9 @@
 (evil--advice-add 'show-paren-function :around #'evil--match-paren-in-normal-state)
 (defun evil--match-paren-in-normal-state (orig-fun &rest args)
   "Match parentheses in Normal state."
-  (if (eq (not (memq 'not evil-highlight-closing-paren-at-point-states))
-          (not (memq evil-state evil-highlight-closing-paren-at-point-states)))
+  (if (or (not evil-local-mode)
+          (eq (not (memq 'not evil-highlight-closing-paren-at-point-states))
+              (not (memq evil-state evil-highlight-closing-paren-at-point-states))))
       (apply orig-fun args)
     (let* ((orig-spdf show-paren-data-function)
            (show-paren-data-function
@@ -226,7 +227,9 @@
 (advice-add 'describe-char  :around #'evil--in-emacs-state)
 (defun evil--in-emacs-state (orig-fun &rest args)
   "Temporarily enter Emacs-state and apply ORIG-FUN to ARGS."
-  (evil-with-state emacs (apply orig-fun args)))
+  (if evil-local-mode
+      (evil-with-state emacs (apply orig-fun args))
+    (apply orig-fun args)))
 
 ;;; ace-jump-mode
 (declare-function ace-jump-char-mode "ext:ace-jump-mode")

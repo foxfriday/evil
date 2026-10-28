@@ -662,7 +662,7 @@ Default is cursor line."
   (if (< 1 (length mark))
       (user-error "Trailing characters")
     (save-excursion
-      (goto-char (if (eobp) end (1- end)))
+      (goto-char (if (= end (point-max)) end (1- end)))
       (evil-beginning-of-line)
       (evil-set-marker (string-to-char mark)))))
 
@@ -1639,9 +1639,13 @@ given."
                                     (setq evil-last-=-register-input (substring ex-arg 1)))))
                 (t (evil-get-register reg)))))
     (unless text (user-error "Nothing in register %c" reg))
+    (when (vectorp text) (setq text (evil-vector-to-string text)))
     (evil-remove-yank-excluded-properties text)
     (goto-char (if (= (point-max) end) end (1- end)))
-    (if force (evil-insert-newline-above) (evil-insert-newline-below))
+    ;; :0put inserts above the first line
+    (if (or force (and (= end (point-min)) (/= end (point-max))))
+        (evil-insert-newline-above)
+      (evil-insert-newline-below))
     (evil-set-marker ?\[ (point))
     ;; `insert' rather than `insert-for-yank' as we want to ignore yank-handlers...
     (insert (if (and (< 0 (length text))
@@ -1879,8 +1883,8 @@ Surround line denoted by BORDERLINE with dashes if non-nil."
       (while continue
         (let* ((line-num (line-number-at-pos))
                (border (and (natnump borderline) (= borderline line-num)))
-               (raw-line (thing-at-point 'line))
-               (line (if (string= "\n" (substring raw-line -1))
+               (raw-line (or (thing-at-point 'line) ""))
+               (line (if (string-suffix-p "\n" raw-line)
                          raw-line (concat raw-line "\n")))
                (border-length (1- (min (length line) (frame-width)))))
           (when border
@@ -2370,6 +2374,7 @@ leave the cursor just after the new text."
   (let* ((text (if register
                    (evil-get-register register)
                  (current-kill 0)))
+         (text (if (vectorp text) (evil-vector-to-string text) text))
          (yank-handler (car-safe (get-text-property
                                   0 'yank-handler text)))
          (dir (evil-visual-direction))
@@ -2383,6 +2388,7 @@ leave the cursor just after the new text."
           ;; When pasting charwise text into linewise selection, keep trailing NL
           (when (and text end
                      (eq 'line type)
+                     (> (length text) 0)
                      (not (eq ?\n (aref text (1- (length text))))))
             (cl-decf end))
           (evil-visual-rotate 'upper-left)
@@ -2974,9 +2980,14 @@ See also \\<evil-insert-state-map>\\[evil-copy-from-above]."
 NUM is relative to the current line and can be negative.
 COL defaults to the current column."
   (interactive "p")
-  (let ((col (or col (current-column))) prefix)
+  (let ((col (or col (current-column)))
+        (line (+ (line-number-at-pos) num))
+        prefix)
     (save-excursion
       (forward-line num)
+      (unless (= (line-number-at-pos) line)
+        ;; There is no such line.
+        (setq n 0))
       (when (looking-at "[[:space:]]*$")
         (if (< num 0)
             (skip-chars-backward " \t\n")
@@ -3475,16 +3486,19 @@ for the last window in each frame."
         (when (eq (process-buffer process) (current-buffer))
           (set-process-query-on-exit-flag process nil))))
     ;; get all windows that show this buffer
-    (let ((wins (get-buffer-window-list (current-buffer) nil t)))
+    (let ((buf (current-buffer))
+          (wins (get-buffer-window-list (current-buffer) nil t)))
       ;; if the buffer which was initiated by emacsclient,
       ;; call `server-edit' from server.el to avoid
       ;; "Buffer still has clients" message
       (if (and (bound-and-true-p server-buffer-clients)
                (fboundp 'server-edit))
           (server-edit)
-        (kill-buffer nil))
-      ;; close all windows that showed this buffer
-      (dolist (w wins) (ignore-errors (delete-window w))))))
+        (kill-buffer buf))
+      ;; close all windows that showed this buffer, unless killing it
+      ;; was cancelled
+      (unless (buffer-live-p buf)
+        (dolist (w wins) (ignore-errors (delete-window w)))))))
 
 (evil-define-command evil-quit (&optional force)
   "Close the current window, current frame, current tab, Emacs.
