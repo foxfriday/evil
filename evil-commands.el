@@ -3415,7 +3415,7 @@ If no FILE is specified, reload the current buffer from disk as read-only."
           (forward-char (cadr result))
           (unless (bolp) (insert "\n")))))
      (t
-      (shell-command (evil-ex-replace-special-filenames (substring file 1)) t)
+      (shell-command (evil-ex-replace-special-filenames (substring file 1) t) t)
       (goto-char (mark))
       (unless (bolp) (insert "\n"))
       (forward-line -1)))))
@@ -3580,7 +3580,7 @@ the previous shell command is executed instead."
         (call-interactively #'evil-ex))
     (if (zerop (length command))
         (when previous (setq command evil-previous-shell-command))
-      (setq command (evil-ex-replace-special-filenames command)
+      (setq command (evil-ex-replace-special-filenames command t)
             evil-previous-shell-command command))
     (cond
      ((zerop (length command))

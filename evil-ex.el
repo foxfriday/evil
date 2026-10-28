@@ -708,10 +708,12 @@ works accordingly."
                      noerror)))
 
 ;; TODO: extensions like :p :~ <cfile> ...
-(defun evil-ex-replace-special-filenames (file-name)
+(defun evil-ex-replace-special-filenames (file-name &optional shell)
   "Replace special symbols in FILE-NAME.
 Replaces % by the current file-name,
-Replaces # by the alternate file-name in FILE-NAME."
+Replaces # by the alternate file-name in FILE-NAME.
+If SHELL is non-nil, FILE-NAME is a shell command and the file-names
+are quoted for the shell."
   (let ((remote (file-remote-p file-name))
         (current-fname (buffer-file-name))
         (alternate-fname (and (other-buffer)
@@ -720,6 +722,7 @@ Replaces # by the alternate file-name in FILE-NAME."
     (when current-fname
       (setq current-fname (or (file-remote-p current-fname 'localname)
                               current-fname))
+      (when shell (setq current-fname (shell-quote-argument current-fname)))
       (setq file-name
             (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(%\\)"
                                       current-fname file-name
@@ -727,6 +730,7 @@ Replaces # by the alternate file-name in FILE-NAME."
     (when alternate-fname
       (setq alternate-fname (or (file-remote-p alternate-fname 'localname)
                                 alternate-fname))
+      (when shell (setq alternate-fname (shell-quote-argument alternate-fname)))
       (setq file-name
             (replace-regexp-in-string "\\(^\\|[^\\\\]\\)\\(#\\)"
                                       alternate-fname file-name

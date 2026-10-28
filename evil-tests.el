@@ -8880,7 +8880,17 @@ maybe we need one line more with some text\n")
     (evil-test-buffer
       "line 5\n[l]ine 4\nline 3\nline 2\nline 1\n"
       ("vj!sort" [return])
-      "line 5\n[l]ine 3\nline 4\nline 2\nline 1\n")))
+      "line 5\n[l]ine 3\nline 4\nline 2\nline 1\n"))
+  (ert-info ("file names are quoted for the shell")
+    (evil-test-buffer
+      "[x]\n"
+      (setq buffer-file-name "/tmp/a b;echo INJECTED")
+      (should (equal (evil-ex-replace-special-filenames "echo %" t)
+                     (concat "echo " (shell-quote-argument buffer-file-name))))
+      (should (equal (evil-ex-replace-special-filenames "cat %")
+                     "cat /tmp/a b;echo INJECTED"))
+      (set-buffer-modified-p nil)
+      (setq buffer-file-name nil))))
 
 (defmacro evil-with-both-search-modules (&rest body)
   `(mapc (lambda (search-module)
