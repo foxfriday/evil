@@ -9689,16 +9689,22 @@ parameter set."
   "Test if we can yank and paste macros containing
                   <escape>"
   :tags '(evil)
-  (ert-info ("Execute yanked macro")
-    (evil-test-buffer
-      "[i]foo\e"
-      ("\"qD@q\"qp"
-      "fooifoo\e")))
-  (ert-info ("Paste recorded marco")
-    (evil-test-buffer
-      (evil-set-register ?q (vconcat "ifoo" [escape]))
-      ("@q\"qp")
-      "fooifoo\e")))
+  ;; A literal \e in a macro is only an escape with `evil-esc-mode'.
+  (let ((esc-mode evil-esc-mode))
+    (evil-esc-mode 1)
+    (unwind-protect
+        (progn
+          (ert-info ("Execute yanked macro")
+            (evil-test-buffer
+              "[i]foo\e"
+              ("\"qD@q\"qp")
+              "fooifoo\e"))
+          (ert-info ("Paste recorded marco")
+            (evil-test-buffer
+              (evil-set-register ?q (vconcat "ifoo" [escape]))
+              ("@q\"qp")
+              "fooifoo\e")))
+      (unless esc-mode (evil-esc-mode -1)))))
 
 (ert-deftest evil-test-forward-symbol ()
   :tags '(evil)
@@ -10222,7 +10228,7 @@ but it works fine in `M-x ert-run-tests-interactively'."
       "[a] b c d e f g h"
       ("/b" [return] "/c" [return] "/d" [return] "/e" [return])
       ("\C-o\C-o" "/g" [return])
-      ("\C-o\C-o\C-o\C-o")
+      ("\C-o\C-o\C-o")
       "[a] b c d e f g h")))
 
 (provide 'evil-tests)
