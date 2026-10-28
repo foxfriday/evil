@@ -154,8 +154,7 @@ Optional keyword arguments are:
        ;; refresh echo area in Eldoc mode
        (when ',motion
          (eval-after-load 'eldoc
-           '(and (fboundp 'eldoc-add-command)
-                 (eldoc-add-command ',motion))))
+           '(eldoc-add-command ',motion)))
        (evil-define-command ,motion (,@args)
          ,@(when doc `(,doc))         ; avoid nil before `interactive'
          ,@keys

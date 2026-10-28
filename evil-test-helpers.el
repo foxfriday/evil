@@ -68,10 +68,7 @@
   "Marker for Visual end.")
 (make-variable-buffer-local 'evil-test-visual-end)
 
-(defvaralias 'evil-test-select-enable-clipboard
-  (if (boundp 'select-enable-clipboard)
-      'select-enable-clipboard
-    'x-select-enable-clipboard))
+(defvaralias 'evil-test-select-enable-clipboard 'select-enable-clipboard)
 
 (defmacro evil-test-buffer (&rest body)
   "Execute FORMS in a temporary buffer.

@@ -104,11 +104,11 @@
       (marker-name
        "[]\\[-a-zA-Z_<>'}{)(]")
       (next
-       "\\\\/" #'(evil-ex-prev-search))
+       "\\\\/" #'(evil-ex-prev-search t))
       (prev
-       "\\\\\\?" #'(evil-ex-prev-search))
+       "\\\\\\?" #'(evil-ex-prev-search nil))
       (subst
-       "\\\\&" #'(evil-ex-prev-search))
+       "\\\\&" #'(evil-ex-prev-search t t))
       (signed-number
        (sign (\? number) #'evil-ex-signed-number))
       (sign
@@ -434,7 +434,14 @@ in case of incomplete or unknown commands."
         func handler current-prefix-arg evil-ex-range evil-ex-bang evil-ex-argument)
     (when (eq (car expr) #'evil-ex-call-command)
       (with-current-buffer evil-ex-original-buffer
-        (let* ((range (eval (nth 1 expr) t))
+        ;; Evaluating the range for the preview must not change the
+        ;; search pattern or flag a backward range for the real command.
+        (let* ((evil-ex-search-pattern evil-ex-search-pattern)
+               (evil-ex-search-direction evil-ex-search-direction)
+               (evil-ex-reverse-range nil)
+               (range (condition-case err (eval (nth 1 expr) t)
+                        (user-error (evil-ex-echo "%s" (error-message-string err))
+                                    nil)))
                (count (when (integerp range) range)))
           (setq current-prefix-arg count
                 evil-ex-range (if count (evil-ex-range count count) range)
@@ -519,7 +526,7 @@ Clean up everything set up by `evil-ex-setup'."
             (save-restriction (narrow-to-region beg (point-max))
                               (funcall completer))))))
       (`((expression) (sexp . ,_))
-       (when (fboundp 'elisp-completion-at-point) (elisp-completion-at-point))))))
+       (elisp-completion-at-point)))))
 
 (defun evil-ex-completion-table ()
   (let ((ex-cmds
@@ -891,49 +898,62 @@ Signal an error if MARKER is in a different buffer."
                  'inclusive))))
 
 (declare-function evil-ex-make-search-pattern "evil-search")
+(declare-function evil-ex-pattern-regex "evil-search")
+(declare-function evil-ex-pattern-ignore-case "evil-search")
+
+(defun evil-ex--search-line (pattern forward)
+  "Return the number of the next line that matches PATTERN.
+Search forward from the next line if FORWARD is non-nil, otherwise
+backward from the previous line, wrapping around the buffer.
+Signal an error if there is no match."
+  (let ((regex (evil-ex-pattern-regex pattern))
+        (case-fold-search (evil-ex-pattern-ignore-case pattern)))
+    (or (condition-case err
+            (save-excursion
+              (if forward
+                  (progn
+                    (evil-move-beginning-of-line 2)
+                    (when (or (re-search-forward regex nil t)
+                              (progn
+                                (goto-char (point-min))
+                                (re-search-forward regex nil t)))
+                      (line-number-at-pos (match-beginning 0))))
+                (evil-move-beginning-of-line)
+                (when (or (re-search-backward regex nil t)
+                          (progn
+                            (goto-char (point-max))
+                            (re-search-backward regex nil t)))
+                  (line-number-at-pos (match-beginning 0)))))
+          (invalid-regexp (user-error "%s" (cadr err))))
+        (user-error "Pattern not found: %s" regex))))
 
 (defun evil-ex-re-fwd (pattern)
   "Search forward for PATTERN.
-Return the line number of the match."
-  (when evil-ex-search-vim-style-regexp
-    (setq pattern (evil-transform-vim-style-regexp pattern)))
+Return the line number of the match.
+Signal an error if there is no match."
   (set-text-properties 0 (length pattern) nil pattern)
   (setq evil-ex-search-pattern (evil-ex-make-search-pattern pattern)
         evil-ex-search-direction 'forward)
-  (condition-case err
-      (save-excursion
-        (evil-move-beginning-of-line 2)
-        (when (or (re-search-forward pattern nil t)
-                  (progn
-                    (goto-char (point-min))
-                    (re-search-forward pattern nil t)))
-          (line-number-at-pos (match-beginning 0))))
-    (invalid-regexp
-     (evil-ex-echo (cadr err))
-     nil)))
+  (evil-ex--search-line evil-ex-search-pattern t))
 
 (defun evil-ex-re-bwd (pattern)
   "Search backward for PATTERN.
-Return the line number of the match."
-  (when evil-ex-search-vim-style-regexp
-    (setq pattern (evil-transform-vim-style-regexp pattern)))
+Return the line number of the match.
+Signal an error if there is no match."
   (set-text-properties 0 (length pattern) nil pattern)
   (setq evil-ex-search-pattern (evil-ex-make-search-pattern pattern)
         evil-ex-search-direction 'backward)
-  (condition-case err
-      (save-excursion
-        (evil-move-beginning-of-line)
-        (when (or (re-search-backward pattern nil t)
-                  (progn
-                    (goto-char (point-max))
-                    (re-search-backward pattern nil t)))
-          (line-number-at-pos (match-beginning 0))))
-    (invalid-regexp
-     (evil-ex-echo (cadr err))
-     nil)))
+  (evil-ex--search-line evil-ex-search-pattern nil))
 
-(defun evil-ex-prev-search ()
-  (error "Previous search not yet implemented"))
+(defun evil-ex-prev-search (forward &optional substitute)
+  "Search for the previous search pattern.
+Search forward if FORWARD is non-nil, otherwise backward.  If
+SUBSTITUTE is non-nil, use the previous substitute pattern instead.
+Return the line number of the match."
+  (let ((pattern (if substitute evil-ex-substitute-pattern
+                   evil-ex-search-pattern)))
+    (unless pattern (user-error "No previous regular expression"))
+    (evil-ex--search-line pattern forward)))
 
 (defun evil-ex-signed-number (sign &optional number)
   "Return a signed number like -3 and +1.

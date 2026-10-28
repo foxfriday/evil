@@ -10231,6 +10231,58 @@ but it works fine in `M-x ert-run-tests-interactively'."
             (evil-ex-pattern-update-replacement nil (make-overlay 1 1))
             (should (= evaluated 0))))))))
 
+(ert-deftest evil-test-ex-review-fixes ()
+  "Regression tests for Ex address and repeat fixes."
+  :tags '(evil)
+  (ert-info ("A search address without a match is an error")
+    (evil-test-buffer
+      "[a]aa\nbbb\nccc\n"
+      (should-error (evil-ex-execute "/nomatch/d"))
+      (should-error (evil-ex-execute "?nomatch?+1d"))
+      (should-error (evil-ex-execute "/[/d"))
+      "[a]aa\nbbb\nccc\n"
+      (":/cc/d" [return])
+      (should (equal (buffer-string) "aaa\nbbb\n"))))
+  (ert-info ("Search addresses respect the case of the pattern")
+    (evil-test-buffer
+      "[x]\nfoo\nFOO\n"
+      (let ((evil-ex-search-case 'smart))
+        (evil-ex-execute "/FOO/d"))
+      (should (equal (buffer-string) "x\nfoo\n"))))
+  (ert-info ("\\/, \\? and \\& use the previous patterns")
+    (evil-test-buffer
+      "foo\nbar\n[x]\nfoo\nbar\n"
+      (setq evil-ex-search-pattern (evil-ex-make-search-pattern "foo")
+            evil-ex-substitute-pattern (evil-ex-make-substitute-pattern "bar" nil))
+      (evil-ex-execute "\\/d")
+      (should (equal (buffer-string) "foo\nbar\nx\nbar\n"))
+      (goto-char (point-min))
+      (forward-line 2)
+      (evil-ex-execute "\\?d")
+      (should (equal (buffer-string) "bar\nx\nbar\n"))
+      (goto-char (point-min))
+      (forward-line 1)
+      (evil-ex-execute "\\&d")
+      (should (equal (buffer-string) "bar\nx\n"))))
+  (ert-info ("Updating the Ex preview leaves no state behind")
+    (evil-test-buffer
+      "[a]aa\nbbb\nccc\n"
+      (let ((evil-ex-search-pattern (evil-ex-make-search-pattern "bbb"))
+            (evil-ex-reverse-range nil)
+            (buffer (current-buffer)))
+        (dolist (cmd '("/ccc/d" "3,1d" "/nomatch/d"))
+          (with-temp-buffer
+            (setq-local evil-ex-original-buffer buffer)
+            (insert cmd)
+            (evil--ex-update)))
+        (should (equal (car evil-ex-search-pattern) "bbb"))
+        (should-not evil-ex-reverse-range))))
+  (ert-info ("Repeating a paste from register 0 uses register 0")
+    (evil-test-buffer
+      "[a]aa\nbbb\nccc"
+      ("yyjdd\"0p.")
+      "aaa\nccc\naaa\n[a]aa")))
+
 (ert-deftest evil-test-command-review-fixes ()
   "Regression tests for command, register and integration fixes."
   :tags '(evil)
