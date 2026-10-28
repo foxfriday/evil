@@ -16,15 +16,8 @@ To set up `package.el` to work with one of the MELPA repositories, you
 can follow the instructions on `melpa.org
 <https://melpa.org/#/getting-started>`_.
 
-Alternatively you can use NonGNU ELPA. It is part of the default
-package archives as of Emacs 28. For older Emacs versions you'll need
-to add it yourself:
-
-.. code-block:: elisp
-
-   (add-to-list 'package-archives
-                (cons "nongnu" (format "http%s://elpa.nongnu.org/nongnu/"
-                                       (if (gnutls-available-p) "s" ""))))
+Alternatively you can use NonGNU ELPA, which is one of the default
+package archives.
 
 Once that is done, you can execute the following commands::
 
@@ -42,8 +35,7 @@ Finally, add the following lines to your Emacs init file:
 Manual installation
 -------------------
 
-First, install `goto-chg` and `cl-lib`.  If you have an Emacs version
-of 24.3 or newer, you should already have `cl-lib`.
+First, install `goto-chg`.  Evil requires Emacs 30.1 or newer.
 
 Evil lives in a git repository.  To download Evil, do::
 
